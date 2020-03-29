@@ -10,6 +10,7 @@ Usage:
 import random
 import string
 import sys
+import os
 
 import numpy    # Used for statistics
 from deap import algorithms
@@ -91,6 +92,36 @@ class Message(list):
 # TODO: Implement levenshtein_distance function (see Day 9 in-class exercises)
 # HINT: Now would be a great time to implement memoization if you haven't.
 
+def levenshtein_distance(str1, str2):
+    filename12 = (str1 + " vs " + str2)
+    filename21 = (str2 + " vs " + str1)
+    if not (os.path.isfile(filename12) or os.path.isfile(filename21)):
+        if str1 == "":
+            return len(str2)
+        if str2 == "":
+            return len(str1)
+        if str1[-1] == str2[-1]:
+            cost = 0
+        else:
+            cost = 1
+
+        result = min([levenshtein_distance(str1[:-1], str2)+1,
+                   levenshtein_distance(str1, str2[:-1])+1,
+                   levenshtein_distance(str1[:-1], str2[:-1]) + cost])
+
+        file = open(filename12, "w+")
+        file.write(str(result))
+        file.close()
+
+        return result
+    else:
+        if  os.path.isfile(filename12):
+            with open(filename12, "r") as file:
+                return int(file.readlines()[0])
+        else:
+            with open(filename21, "r") as file:
+                return int(file.readlines()[0])
+
 def evaluate_text(message, goal_text, verbose=VERBOSE):
     """Given a Message and a goal_text string, return the Levenshtein distance
     between the Message and the goal_text as a length 1 tuple.
@@ -115,13 +146,19 @@ def mutate_text(message, prob_ins=0.05, prob_del=0.05, prob_sub=0.05):
     """
 
     if random.random() < prob_ins:
-        # TODO: Implement insertion-type mutation
-        pass
+        index = random.randint(0, (len(message)-1))
+        char = random.choice(VALID_CHARS)
+        message.insert(index,char)
 
-    # TODO: Also implement deletion and substitution mutations
-    # HINT: Message objects inherit from list, so they also inherit
-    #       useful list methods
-    # HINT: You probably want to use the VALID_CHARS global variable
+    elif random.random() < prob_del:
+        index = random.randint(0, (len(message)-1))
+        message.pop(index)
+
+    elif random.random() < prob_sub:
+        index = random.randint(0, (len(message)-1))
+        char = random.choice(VALID_CHARS)
+        message = message[:index] + char + message[(index+1):]
+
 
     return (message,)   # Length 1 tuple, required by DEAP
 
@@ -143,7 +180,7 @@ def get_toolbox(text):
 
     # Genetic operators
     toolbox.register("evaluate", evaluate_text, goal_text=text)
-    toolbox.register("mate", tools.cxTwoPoint)
+    toolbox.register("mate", mate_text)
     toolbox.register("mutate", mutate_text)
     toolbox.register("select", tools.selTournament, tournsize=3)
 
@@ -153,6 +190,19 @@ def get_toolbox(text):
 
     return toolbox
 
+def mate_text(str1, str2):
+    l1 = len(str1)
+    l2 = len(str2)
+    new_str1 = ""
+    new_str2 = ""
+    for i in range(l1):
+        choice = random.randint(1,2)
+        if choice == 1:
+            new_str1 += str1[i]
+            new_str2 += str2[i]
+        elif choice == 2
+            new_str1 += str2[i]
+            new_str2 += str1[i]
 
 def evolve_string(text):
     """Use an evolutionary algorithm (EA) to evolve 'text' string."""
